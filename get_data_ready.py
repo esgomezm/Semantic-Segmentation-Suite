@@ -30,9 +30,6 @@ path2rgbdata= r'/content/drive/My Drive/TFG/Seg_github/RGB_data/'
 names=['test','test_labels','train','train_labels','val','val_labels']
 names_length = len(names)
 
-from progressbar import ProgressBar
-pbar = ProgressBar()
-
 def load_itk_image(filename):
     itkimage = sitk.ReadImage(filename)
     numpyImage = sitk.GetArrayFromImage(itkimage)
@@ -49,16 +46,17 @@ for i in pbar(range(names_length)):
     if not path.exists(path2rgbdata + names[i] + '/' ):
         os.mkdir(path2rgbdata + names[i] + '/')
     for file in os.listdir(path2data + names[i]):
-        if '_L.tif' in file:
-            old_pic=load_itk_image(path2data + names[i] + '/' + file)
+        old_pic=load_itk_image(path2data + names[i] + '/' + file)
+        n, w, h = old_pic.shape
+        filename=os.path.splitext(file)[0]
+        if '_L.tif' in file: 
             old_pic[old_pic>0]=255           
             im8 = old_pic.astype('uint8')
-            rgbim=to_rgb(im8)
-            imsitk = sitk.GetImageFromArray(rgbim.astype(np.uint8))
-            sitk.WriteImage(imsitk, path2rgbdata + names[i] +'/' + file)
         else:
             old_pic=load_itk_image(path2data + names[i] + '/' + file)            
             im8 = (old_pic/256).astype('uint8')
-            rgbim=to_rgb(im8)
-            imsitk = sitk.GetImageFromArray(rgbim.astype(np.uint8))
-            sitk.WriteImage(imsitk, path2rgbdata + names[i] +'/' + file)
+        rgbim=to_rgb(im8)
+        for j in range(n):
+            im2save=rgbim[j,:,:,:]
+            imsitk = sitk.GetImageFromArray(im2save.astype(np.uint8))
+            sitk.WriteImage(imsitk, path2rgbdata + names[i] +'/' +  filename + '_' + str(j) + '.tif')

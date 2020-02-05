@@ -7,6 +7,7 @@ import time, datetime
 import os, random
 from scipy.misc import imread
 import ast
+import SimpleITK as sitk
 from sklearn.metrics import precision_score, \
     recall_score, confusion_matrix, classification_report, \
     accuracy_score, f1_score
