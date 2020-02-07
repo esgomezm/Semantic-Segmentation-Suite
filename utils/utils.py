@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 import os,time,cv2, sys, math
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
+import re
 import numpy as np
 import time, datetime
 import os, random
@@ -21,7 +21,7 @@ def prepare_data(dataset_dir):
     val_output_names=[]
     test_input_names=[]
     test_output_names=[]
-    for file in os.listdir(dataset_dir + "/train"):
+    for file in os.listdir(dataset_dir + "/train/"):
         cwd = os.getcwd()
         train_input_names.append(cwd + "/" + dataset_dir + "/train/" + file)
     for file in os.listdir(dataset_dir + "/train_labels"):
@@ -43,8 +43,12 @@ def prepare_data(dataset_dir):
     return train_input_names,train_output_names, val_input_names, val_output_names, test_input_names, test_output_names
 
 def load_image(path):
-    image = cv2.cvtColor(cv2.imread(path,-1), cv2.COLOR_BGR2RGB)
-    return image
+    if '//' in path:
+      k=[m.start() for m in re.finditer('//',path)]
+      path=path[k[0]+1:]
+    itkimage = sitk.ReadImage(path)
+    numpyImage = sitk.GetArrayFromImage(itkimage)
+    return numpyImage
 
 # Takes an absolute file path and returns the name of the file without th extension
 def filepath_to_name(full_name):
