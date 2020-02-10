@@ -34,10 +34,10 @@ parser.add_argument('--checkpoint_step', type=int, default=5, help='How often to
 parser.add_argument('--validation_step', type=int, default=1, help='How often to perform validation (epochs)')
 parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=False, help='Whether to continue training from a checkpoint')
-parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
-#parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/Seg_github/RGB_data/", help='Dataset you are using.')
-parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
-parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
+#parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
+parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/data/RGB_folder/", help='Dataset you are using.')
+parser.add_argument('--crop_height', type=int, default=983, help='Height of cropped input image to network')
+parser.add_argument('--crop_width', type=int, default=985, help='Width of cropped input image to network')
 parser.add_argument('--batch_size', type=int, default=1, help='Number of images in each batch')
 parser.add_argument('--num_val_images', type=int, default=20, help='The number of images to used for validations')
 parser.add_argument('--h_flip', type=str2bool, default=False, help='Whether to randomly flip the image horizontally for data augmentation')
@@ -236,8 +236,10 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         # Do the validation on a small set of validation images
         for ind in val_indices:
 
-            input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
-            gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
+            input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])
+            gt = utils.load_image(val_output_names[ind])                                        
+            #input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
+            #gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
 
             # st = time.time()
