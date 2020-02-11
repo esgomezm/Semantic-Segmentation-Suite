@@ -11,7 +11,6 @@ def get_label_info(csv_path):
     """
     Retrieve the class names and label values for the selected dataset.
     Must be in CSV format!
-
     # Arguments
         csv_path: The file path of the class dictionairy
         
@@ -38,7 +37,6 @@ def one_hot_it(label, label_values):
     """
     Convert a segmentation image label array to one-hot format
     by replacing each pixel value with a vector of length num_classes
-
     # Arguments
         label: The 2D array segmentation image label
         label_values
@@ -78,7 +76,6 @@ def reverse_one_hot(image):
     Transform a 2D array in one-hot format (depth is num_classes),
     to a 2D array with only 1 channel, where each pixel value is
     the classified class key.
-
     # Arguments
         image: The one-hot format image 
         
@@ -103,7 +100,6 @@ def reverse_one_hot(image):
 def colour_code_segmentation(image, label_values):
     """
     Given a 1-channel array of class keys, colour code the segmentation results.
-
     # Arguments
         image: single channel array where each value represents the class key.
         label_values

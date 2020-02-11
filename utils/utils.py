@@ -175,15 +175,13 @@ def random_crop(image, label, crop_height, crop_width):
         raise Exception('Image and label must have the same dimensions!')
         
     if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
-       # x = random.randint(0, image.shape[1]-crop_width)
-        #y = random.randint(0, image.shape[0]-crop_height)
+        x = random.randint(0, image.shape[1]-crop_width)
+        y = random.randint(0, image.shape[0]-crop_height)
         
         if len(label.shape) == 3:
-            return image, label
-            #return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width, :]
+            return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width, :]
         else:
-            return image, label
-           # return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width]
+            return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width]
     else:
         raise Exception('Crop shape (%d, %d) exceeds image dimensions (%d, %d)!' % (crop_height, crop_width, image.shape[0], image.shape[1]))
 
@@ -261,10 +259,8 @@ def compute_class_weights(labels_dir, label_values):
     Arguments:
         labels_dir(list): Directory where the image segmentation labels are
         num_classes(int): the number of classes of pixels in all images
-
     Returns:
         class_weights(list): a list of class weights where each index represents each class label and the element is the class weight for that label.
-
     '''
     image_files = [os.path.join(labels_dir, file) for file in os.listdir(labels_dir) if file.endswith('.png')]
 
@@ -303,4 +299,3 @@ def memory():
     py = psutil.Process(pid)
     memoryUse = py.memory_info()[0]/2.**30  # Memory use in GB
     print('Memory usage in GBs:', memoryUse)
-

@@ -216,7 +216,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
 
     if val_indices != 0 and epoch % args.checkpoint_step == 0:
         print("Saving checkpoint for this epoch")
-        saver.save(sess,"model.ckpt"%("checkpoints",epoch))
+        saver.save(sess,"%s/%04d/model.ckpt"%("checkpoints",epoch))
 
 
     if epoch % args.validation_step == 0:
@@ -236,8 +236,6 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         # Do the validation on a small set of validation images
         for ind in val_indices:
 
-            #input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])
-            #gt = utils.load_image(val_output_names[ind])                                        
             input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
             gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
@@ -337,6 +335,5 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax3.set_ylabel("Current IoU")
 
     plt.savefig('iou_vs_epochs.png')
-
 
 
