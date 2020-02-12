@@ -175,8 +175,22 @@ def random_crop(image, label, crop_height, crop_width):
         raise Exception('Image and label must have the same dimensions!')
         
     if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
-        x = random.randint(0, image.shape[1]-crop_width)
-        y = random.randint(0, image.shape[0]-crop_height)
+        coin=np.where(image[:,:,0]==255)
+        loop=0
+        if coin[0].size>0:
+            while loop<6:
+                x = random.randint(0, image.shape[1]-crop_width)
+                y = random.randint(0, image.shape[0]-crop_height)
+                dis=image[y:y+crop_height, x:x+crop_width, :]
+                pat=np.where(dis[:,:,0]==255)
+                if pat[0].size>0:
+                    loop=100
+                else:
+                    loop+=1
+        else:
+            x = random.randint(0, image.shape[1]-crop_width)
+            y = random.randint(0, image.shape[0]-crop_height)
+#This lines above are for making sure that, if possible
         
         if len(label.shape) == 3:
             return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width, :]
