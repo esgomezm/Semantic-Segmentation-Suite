@@ -35,7 +35,7 @@ parser.add_argument('--validation_step', type=int, default=1, help='How often to
 parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=False, help='Whether to continue training from a checkpoint')
 #parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
-parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/data/RGB_folder/", help='Dataset you are using.')
+parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/data/RGB_folder/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
 parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
 parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
 parser.add_argument('--batch_size', type=int, default=1, help='Number of images in each batch')
@@ -110,7 +110,10 @@ if init_fn is not None:
     init_fn(sess)
 
 # Load a previous checkpoint if desired
-model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + args.dataset + ".ckpt"
+path=args.dataset
+folder_dataset=path.split('/')[-2]
+model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + folder_dataset + ".ckpt"
+#model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + args.dataset + ".ckpt"
 if args.continue_training:
     print('Loaded latest model checkpoint')
     saver.restore(sess, model_checkpoint_name)
