@@ -8,6 +8,7 @@ import argparse
 import random
 import os, sys
 import subprocess
+from pandas import DataFrame
 
 # use 'Agg' on matplotlib so that plots could be generated even without Xserver
 # running
@@ -26,6 +27,9 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+#Create a DataFrame for saving later the values to an .xlsx file
+df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs', type=int, default=300, help='Number of epochs to train for')
@@ -339,4 +343,14 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
 
     plt.savefig('iou_vs_epochs.png')
 
+#To save the data in an excel file    
+    sheet_name= args.model + '_' + folder_dataset + '.xlsx'
+    df.at[epoch, 'Average']= avg_score
+    for index, item in enumerate(class_avg_scores):
+        df.at[epoch, class_names_list[index]]=item
+    df.at[epoch, 'Validation precision']= avg_precision
+    df.at[epoch, 'Validation recall']=avg_recall
+    df.at[epoch, 'F1 score']=avg_f1
+    df.at[epoch, 'IoU score']=avg_iou
+    export_excel = mf.to_excel (r'/content/gdrive/My Drive/TFG/Seg_github/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
 
