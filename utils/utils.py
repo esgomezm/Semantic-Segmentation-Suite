@@ -173,23 +173,35 @@ def lovasz_softmax(probas, labels, only_present=True, per_image=False, ignore=No
 def random_crop(image, label, crop_height, crop_width):
     if (image.shape[0] != label.shape[0]) or (image.shape[1] != label.shape[1]):
         raise Exception('Image and label must have the same dimensions!')
-        
-    if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
-        coin=np.where(label[:,:,0]==255)
-        loop=0
-        if coin[0].size>0:
-            while loop<6:
-                x = random.randint(0, label.shape[1]-crop_width)
-                y = random.randint(0, label.shape[0]-crop_height)
-                dis=label[y:y+crop_height, x:x+crop_width, :]
-                pat=np.where(dis[:,:,0]==255)
-                if pat[0].size>0:
-                    loop=100
-                else:
-                    loop+=1
-        else:
-            x = random.randint(0, label.shape[1]-crop_width)
-            y = random.randint(0, label.shape[0]-crop_height)
+    pdf_im = np.ones(label.shape) # y is a mask
+    pdf_im[label>0]=10000 # pdf aquí es un peso. Por ejemplo 10000. 
+    pdf_im = pdf_im[crop_width:(image.shape[0]-crop_width),crop_height:(image.shape[1]-crop_height] # limit the coordinates in which a centroid can lay
+    prob = np.float32(pdf_im)
+    prob = prob.ravel()/np.sum(prob) # convert the 2D matrix into a vector and normalize it so you create a distribution of all the possible values between 1 and prod(pdf.shape)(sum=1)
+    choices = np.prod(pdf_im.shape) 
+    index = np.random.choice(choices, size=1,p = prob) # get a random centroid but following a pdf distribution.
+    coordinates = np.unravel_index(index, shape=pdf_im.shape)
+    offsetw = coordinates[0][0] # pdf first coordinate corresponds to the "x" axis = width
+    x = offsetw + crop_width
+    offseth = coordinates[1][0] # pdf second coordinate corresponds to the "y" axis = height
+    y = offseth + crop_height   
+    
+#    if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
+#        coin=np.where(label[:,:,0]==255)
+#        loop=0
+#        if coin[0].size>0:
+#            while loop<6:
+#                x = random.randint(0, label.shape[1]-crop_width)
+#                y = random.randint(0, label.shape[0]-crop_height)
+#                dis=label[y:y+crop_height, x:x+crop_width, :]
+#                pat=np.where(dis[:,:,0]==255)
+#                if pat[0].size>0:
+#                    loop=100
+#                else:
+#                    loop+=1
+#        else:
+#            x = random.randint(0, label.shape[1]-crop_width)
+#            y = random.randint(0, label.shape[0]-crop_height)
 #This lines above are for making sure that, if possible
         
         if len(label.shape) == 3:
