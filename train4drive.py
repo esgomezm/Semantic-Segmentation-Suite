@@ -126,7 +126,12 @@ if args.continue_training:
 print("Loading the data ...")
 train_input_names,train_output_names, val_input_names, val_output_names, test_input_names, test_output_names = utils.prepare_data(dataset_dir=args.dataset)
 
-
+#For excel:
+sheet_name= args.model + '_' + folder_dataset + '.xlsx'
+if not args.continue_training:
+    df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
+else:
+    df=pd.read_excel('/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/'+sheet_name)
 
 print("\n***** Begin training *****")
 print("Dataset -->", args.dataset)
