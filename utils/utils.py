@@ -176,16 +176,22 @@ def random_crop(image, label, crop_height, crop_width):
     if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
         pdf_im = np.ones(label.shape) # y is a mask
         pdf_im[label>0]=10000 # pdf aquí es un peso. Por ejemplo 10000. 
-        pdf_im = pdf_im[crop_width:(image.shape[0]-crop_width),crop_height:(image.shape[1]-crop_height] # limit the coordinates in which a centroid can lay
+        cropw = crop_width/2
+        croph = crop_height/2
+        pdf_im = pdf_im[cropw:(image.shape[0]-cropw),croph:(image.shape[1]-croph)] # limit the coordinates in which a centroid can lay
         prob = np.float32(pdf_im)
         prob = prob.ravel()/np.sum(prob) # convert the 2D matrix into a vector and normalize it so you create a distribution of all the possible values between 1 and prod(pdf.shape)(sum=1)
         choices = np.prod(pdf_im.shape) 
-        index = np.random.choice(choices, size=1,p = prob) # get a random centroid but following a pdf distribution.
-        coordinates = np.unravel_index(index, shape=pdf_im.shape)
-        offsetw = coordinates[0][0] # pdf first coordinate corresponds to the "x" axis = width
-        x = offsetw + crop_width
-        offseth = coordinates[1][0] # pdf second coordinate corresponds to the "y" axis = height
-        y = offseth + crop_height   
+        if np.count_nonzero(choices)>=1: #This is because some of the images do not have cells on them
+            index = np.random.choice(choices, size=1,p = prob) # get a random centroid but following a pdf distribution.
+            coordinates = np.unravel_index(index, shape=pdf_im.shape)
+            offsetw = coordinates[0][0] # pdf first coordinate corresponds to the "x" axis = width
+            x = offsetw + crop_width
+            offseth = coordinates[1][0] # pdf second coordinate corresponds to the "y" axis = height
+            y = offseth + crop_height
+        else:
+            x = random.randint(0, label.shape[1]-crop_width)
+            y = random.randint(0, label.shape[0]-crop_height)
         if len(label.shape) == 3:
             return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width, :]
         else:
