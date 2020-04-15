@@ -131,7 +131,7 @@ sheet_name= args.model + '_' + folder_dataset + '.xlsx'
 if not args.continue_training:
     df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
 else:
-    df=pd.read_excel('/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/'+sheet_name)
+    df=pd.read_excel('/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name)
 
 print("\n***** Begin training *****")
 print("Dataset -->", args.dataset)
@@ -357,5 +357,5 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     df.at[epoch, 'Validation recall']=avg_recall
     df.at[epoch, 'F1 score']=avg_f1
     df.at[epoch, 'IoU score']=avg_iou
-    export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/Seg_github/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
+    export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
 
