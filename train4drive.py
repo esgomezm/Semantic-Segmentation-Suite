@@ -357,5 +357,5 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     df.at[epoch, 'Validation recall']=avg_recall
     df.at[epoch, 'F1 score']=avg_f1
     df.at[epoch, 'IoU score']=avg_iou
-    export_excel = mf.to_excel (r'/content/gdrive/My Drive/TFG/Seg_github/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
+    export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/Seg_github/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
 
