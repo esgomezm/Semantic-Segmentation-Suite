@@ -29,10 +29,10 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 #Create a DataFrame for saving later the values to an .xlsx file
-df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
+df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score','Hausdorff distance'])
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--num_epochs', type=int, default=300, help='Number of epochs to train for')
+parser.add_argument('--num_epochs', type=int, default=30, help='Number of epochs to train for')
 parser.add_argument('--epoch_start_i', type=int, default=0, help='Start counting epochs from this number')
 parser.add_argument('--checkpoint_step', type=int, default=5, help='How often to save checkpoints (epochs)')
 parser.add_argument('--validation_step', type=int, default=1, help='How often to perform validation (epochs)')
@@ -101,7 +101,8 @@ network, init_fn = model_builder.build_model(model_name=args.model, frontend=arg
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=network, labels=net_output))
 
-opt = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
+learn_rate=0.0005
+opt = tf.train.RMSPropOptimizer(learning_rate=0.0005, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
 
 saver=tf.train.Saver(max_to_keep=1000)
 sess.run(tf.global_variables_initializer())
@@ -152,6 +153,7 @@ print("")
 avg_loss_per_epoch = []
 avg_scores_per_epoch = []
 avg_iou_per_epoch = []
+avg_hausdorff_per_epoch =[]
 
 # Which validation images do we want
 val_indices = []
@@ -243,6 +245,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         recall_list = []
         f1_list = []
         iou_list = []
+        hausdorff_list = []
 
 
         # Do the validation on a small set of validation images
@@ -261,10 +264,10 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             output_image = helpers.reverse_one_hot(output_image)
             out_vis_image = helpers.colour_code_segmentation(output_image, label_values)
 
-            accuracy, class_accuracies, prec, rec, f1, iou = utils.evaluate_segmentation(pred=output_image, label=gt, num_classes=num_classes)
+            accuracy, class_accuracies, prec, rec, f1, iou, hausdorff = utils.evaluate_segmentation(pred=output_image, label=gt, num_classes=num_classes)
 
             file_name = utils.filepath_to_name(val_input_names[ind])
-            target.write("%s, %f, %f, %f, %f, %f"%(file_name, accuracy, prec, rec, f1, iou))
+            target.write("%s, %f, %f, %f, %f, %f, %f"%(file_name, accuracy, prec, rec, f1, iou, hausdorff))
             for item in class_accuracies:
                 target.write(", %f"%(item))
             target.write("\n")
@@ -275,6 +278,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             recall_list.append(rec)
             f1_list.append(f1)
             iou_list.append(iou)
+            hausdorff_list.append(hausdorff)
 
             gt = helpers.colour_code_segmentation(gt, label_values)
 
@@ -294,6 +298,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         avg_f1 = np.mean(f1_list)
         avg_iou = np.mean(iou_list)
         avg_iou_per_epoch.append(avg_iou)
+        avg_hausdorff_per_epoch.append(hausdorff)
 
         print("\nAverage validation accuracy for epoch # %04d = %f"% (epoch, avg_score))
         print("Average per class validation accuracies for epoch # %04d:"% (epoch))
@@ -303,6 +308,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         print("Validation recall = ", avg_recall)
         print("Validation F1 score = ", avg_f1)
         print("Validation IoU score = ", avg_iou)
+        print("Validation Hausdorff distance score = ", avg_hausdorff)
 
     epoch_time=time.time()-epoch_st
     remain_time=epoch_time*(args.num_epochs-1-epoch)
@@ -347,9 +353,20 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax3.set_ylabel("Current IoU")
 
     plt.savefig('iou_vs_epochs.png')
+    
+    plt.clf()
+
+    fig4, ax4 = plt.subplots(figsize=(11, 8))
+
+    ax4.plot(range(epoch+1), avg_hausdorff_per_epoch)
+    ax4.set_title("Hausdorff distance vs epochs")
+    ax4.set_xlabel("Epoch")
+    ax4.set_ylabel("Current Hausdorff distance")
+
+    plt.savefig('hausdorff_vs_epochs.png')
 
 #To save the data in an excel file    
-    sheet_name= args.model + '_' + folder_dataset + '.xlsx'
+    sheet_name= args.model + '_' + folder_dataset  + learn_rate + '.xlsx'
     df.at[epoch, 'Average']= avg_score
     for index, item in enumerate(class_avg_scores):
         df.at[epoch, class_names_list[index]]=item
@@ -357,5 +374,6 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     df.at[epoch, 'Validation recall']=avg_recall
     df.at[epoch, 'F1 score']=avg_f1
     df.at[epoch, 'IoU score']=avg_iou
+    df.at[epoch, 'Hausdorff distance']=hausdorff
     export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
 
