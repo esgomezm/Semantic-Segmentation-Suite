@@ -101,7 +101,7 @@ network, init_fn = model_builder.build_model(model_name=args.model, frontend=arg
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=network, labels=net_output))
 
-learn_rate=0.005
+learn_rate=str(0.005)
 opt = tf.train.RMSPropOptimizer(learning_rate=0.005, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
 
 saver=tf.train.Saver(max_to_keep=1000)
