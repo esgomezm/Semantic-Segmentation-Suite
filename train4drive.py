@@ -32,7 +32,7 @@ def str2bool(v):
 df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--num_epochs', type=int, default=300, help='Number of epochs to train for')
+parser.add_argument('--num_epochs', type=int, default=30, help='Number of epochs to train for')
 parser.add_argument('--epoch_start_i', type=int, default=0, help='Start counting epochs from this number')
 parser.add_argument('--checkpoint_step', type=int, default=5, help='How often to save checkpoints (epochs)')
 parser.add_argument('--validation_step', type=int, default=1, help='How often to perform validation (epochs)')
@@ -101,7 +101,8 @@ network, init_fn = model_builder.build_model(model_name=args.model, frontend=arg
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=network, labels=net_output))
 
-opt = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
+learn_rate=0.005
+opt = tf.train.RMSPropOptimizer(learning_rate=0.005, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
 
 saver=tf.train.Saver(max_to_keep=1000)
 sess.run(tf.global_variables_initializer())
@@ -349,7 +350,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     plt.savefig('iou_vs_epochs.png')
 
 #To save the data in an excel file    
-    sheet_name= args.model + '_' + folder_dataset + '.xlsx'
+    sheet_name= args.model + '_' + folder_dataset + learn_rate + '.xlsx'
     df.at[epoch, 'Average']= avg_score
     for index, item in enumerate(class_avg_scores):
         df.at[epoch, class_names_list[index]]=item
