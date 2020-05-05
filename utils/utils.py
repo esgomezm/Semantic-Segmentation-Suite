@@ -13,7 +13,6 @@ from sklearn.metrics import precision_score, \
     accuracy_score, f1_score
 
 from utils import helpers
-from scipy.spatial.distance import directed_hausdorff
 
 def prepare_data(dataset_dir):
     train_input_names=[]
@@ -259,10 +258,8 @@ def evaluate_segmentation(pred, label, num_classes, score_averaging="weighted"):
     f1 = f1_score(flat_pred, flat_label, average=score_averaging)
 
     iou = compute_mean_iou(flat_pred, flat_label)
-    
-    hausdorff = max(directed_hausdorff(flat_pred, flat_label)[0], directed_hausdorff(flat_label, flat_pred)[0])
 
-    return global_accuracy, class_accuracies, prec, rec, f1, iou, hausdorff
+    return global_accuracy, class_accuracies, prec, rec, f1, iou
 
     
 def compute_class_weights(labels_dir, label_values):
