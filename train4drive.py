@@ -29,7 +29,7 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 #Create a DataFrame for saving later the values to an .xlsx file
-df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
+df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs', type=int, default=30, help='Number of epochs to train for')
@@ -101,8 +101,8 @@ network, init_fn = model_builder.build_model(model_name=args.model, frontend=arg
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=network, labels=net_output))
 
-learn_rate=str(0.005)
-opt = tf.train.RMSPropOptimizer(learning_rate=0.005, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
+learn_rate=str(0.01)
+opt = tf.train.RMSPropOptimizer(learning_rate=0.01, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
 
 saver=tf.train.Saver(max_to_keep=1000)
 sess.run(tf.global_variables_initializer())
@@ -130,7 +130,7 @@ train_input_names,train_output_names, val_input_names, val_output_names, test_in
 #For excel:
 sheet_name= args.model + '_' + folder_dataset + '.xlsx'
 if not args.continue_training:
-    df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score'])
+    df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
 else:
     df=pd.read_excel('/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name)
 
@@ -350,7 +350,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     plt.savefig('iou_vs_epochs.png')
 
 #To save the data in an excel file    
-    sheet_name= args.model + '_' + folder_dataset + learn_rate + '.xlsx'
+    sheet_name= args.model + '_' + folder_dataset + '.xlsx'
     df.at[epoch, 'Average']= avg_score
     for index, item in enumerate(class_avg_scores):
         df.at[epoch, class_names_list[index]]=item
@@ -358,5 +358,6 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     df.at[epoch, 'Validation recall']=avg_recall
     df.at[epoch, 'F1 score']=avg_f1
     df.at[epoch, 'IoU score']=avg_iou
+    df.at[epoch, 'LR'] = learn_rate
     export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
 
