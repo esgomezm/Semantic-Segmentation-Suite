@@ -7,11 +7,11 @@ from utils import utils, helpers
 from builders import model_builder
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--checkpoint_path', type=str, default=None, required=True, help='The path to the latest checkpoint weights for your model.')
+parser.add_argument('--checkpoint_path', type=str, default='checkpoints/latest_model_MobileUNet_RGB_folder.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
 parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
 parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
-parser.add_argument('--model', type=str, default=None, required=True, help='The model you are using')
-parser.add_argument('--dataset', type=str, default="CamVid", required=False, help='The dataset you are using')
+parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
+parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/RGB_folder/", required=False, help='The dataset you are using')
 args = parser.parse_args()
 
 # Get the names of the classes so we can record the evaluation results
@@ -37,10 +37,10 @@ net_output = tf.placeholder(tf.float32,shape=[None,None,None,num_classes])
 network, _ = model_builder.build_model(args.model, net_input=net_input, num_classes=num_classes, crop_width=args.crop_width, crop_height=args.crop_height, is_training=False)
 
 sess.run(tf.global_variables_initializer())
-
+model_checkpoint_name=args.checkpoint_path
 print('Loading model checkpoint weights ...')
 saver=tf.train.Saver(max_to_keep=1000)
-saver.restore(sess, args.checkpoint_path)
+saver.restore(sess, model_checkpoint_name)
 
 # Load the data
 print("Loading the data ...")
@@ -117,3 +117,4 @@ print("Average recall = ", avg_recall)
 print("Average F1 score = ", avg_f1)
 print("Average mean IoU score = ", avg_iou)
 print("Average run time = ", avg_time)
+
