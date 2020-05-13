@@ -268,7 +268,11 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         for ind in val_indices:
 
             # input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
-            input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]), axis=0)
+            input_image = np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]) / (2**(16)-1)
+            if len(input_image.shape)==2:            
+                input_image = input_image.reshape((input_image.shape[0], input_image.shape[1], 1))
+            input_image = np.expand_dims(input_image, axis=0)
+
             gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
 
