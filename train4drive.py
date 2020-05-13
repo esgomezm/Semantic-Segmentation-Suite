@@ -32,22 +32,24 @@ def str2bool(v):
 df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--num_epochs', type=int, default=30, help='Number of epochs to train for')
+parser.add_argument('--num_epochs', type=int, default=100, help='Number of epochs to train for')
 parser.add_argument('--epoch_start_i', type=int, default=0, help='Start counting epochs from this number')
 parser.add_argument('--checkpoint_step', type=int, default=5, help='How often to save checkpoints (epochs)')
 parser.add_argument('--validation_step', type=int, default=1, help='How often to perform validation (epochs)')
 parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=True, help='Whether to continue training from a checkpoint')
 #parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
-parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/RGB_folder/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
+# parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/RGB_folder/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
+parser.add_argument('--dataset', type=str, default="/data/data/SemmanticSeg/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
 parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
 parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
 parser.add_argument('--batch_size', type=int, default=1, help='Number of images in each batch')
-parser.add_argument('--num_val_images', type=int, default=20, help='The number of images to used for validations')
-parser.add_argument('--h_flip', type=str2bool, default=False, help='Whether to randomly flip the image horizontally for data augmentation')
-parser.add_argument('--v_flip', type=str2bool, default=False, help='Whether to randomly flip the image vertically for data augmentation')
+parser.add_argument('--learning_rate', type=float, default=0.01, help='Initial learning rate')
+parser.add_argument('--num_val_images', type=int, default=100, help='The number of images to used for validations')
+parser.add_argument('--h_flip', type=str2bool, default=True, help='Whether to randomly flip the image horizontally for data augmentation')
+parser.add_argument('--v_flip', type=str2bool, default=True, help='Whether to randomly flip the image vertically for data augmentation')
 parser.add_argument('--brightness', type=float, default=None, help='Whether to randomly change the image brightness for data augmentation. Specifies the max bightness change as a factor between 0.0 and 1.0. For example, 0.1 represents a max brightness change of 10%% (+-).')
-parser.add_argument('--rotation', type=float, default=None, help='Whether to randomly rotate the image for data augmentation. Specifies the max rotation angle in degrees.')
+parser.add_argument('--rotation', type=float, default=180, help='Whether to randomly rotate the image for data augmentation. Specifies the max rotation angle in degrees.')
 parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
 parser.add_argument('--frontend', type=str, default="MobileNetV2", help='The frontend you are using. See frontend_builder.py for supported models')
 args = parser.parse_args()
@@ -94,15 +96,15 @@ sess=tf.Session(config=config)
 
 
 # Compute your softmax cross entropy loss
-net_input = tf.placeholder(tf.float32,shape=[None,None,None,3])
+# net_input = tf.placeholder(tf.float32,shape=[None,None,None,3])
+net_input = tf.placeholder(tf.float32,shape=[None,None,None,1]) # We work with intensities not RGB images.
 net_output = tf.placeholder(tf.float32,shape=[None,None,None,num_classes])
 
 network, init_fn = model_builder.build_model(model_name=args.model, frontend=args.frontend, net_input=net_input, num_classes=num_classes, crop_width=args.crop_width, crop_height=args.crop_height, is_training=True)
 
 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=network, labels=net_output))
 
-learn_rate=str(0.01)
-opt = tf.train.RMSPropOptimizer(learning_rate=0.01, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
+opt = tf.train.RMSPropOptimizer(learning_rate=args.learning_rate, decay=0.995).minimize(loss, var_list=[var for var in tf.trainable_variables()])
 
 saver=tf.train.Saver(max_to_keep=1000)
 sess.run(tf.global_variables_initializer())
@@ -116,10 +118,10 @@ if init_fn is not None:
 
 # Load a previous checkpoint if desired
 path=args.dataset
-folder_dataset=path.split('/')[-2]
-model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + folder_dataset + ".ckpt"
-#model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + args.dataset + ".ckpt"
-if args.continue_training:
+# folder_dataset=path.split('/')[-2]
+model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + ".ckpt"
+# model_checkpoint_name = "checkpoints/latest_model_" + args.model + "_" + folder_dataset + ".ckpt"
+if args.continue_training and os.path.isdir("checkpoints"):
     print('Loaded latest model checkpoint')
     saver.restore(sess, model_checkpoint_name)
 
@@ -128,11 +130,13 @@ print("Loading the data ...")
 train_input_names,train_output_names, val_input_names, val_output_names, test_input_names, test_output_names = utils.prepare_data(dataset_dir=args.dataset)
 
 #For excel:
-sheet_name= args.model + '_' + folder_dataset + '.xlsx'
-if not args.continue_training:
+
+# sheet_name= os.path.join("results",args.model + '_' + folder_dataset + '.xlsx')
+sheet_name= os.path.join("results",args.model + '.xlsx')
+if not args.continue_training or os.path.exists(sheet_name)==0:
     df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
 else:
-    df=pd.read_excel('/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name)
+    df=pd.read_excel(sheet_name)
 
 print("\n***** Begin training *****")
 print("Dataset -->", args.dataset)
@@ -163,6 +167,10 @@ num_vals = min(args.num_val_images, len(val_input_names))
 random.seed(16)
 val_indices=random.sample(range(0,len(val_input_names)),num_vals)
 
+# Create a folder called results to save the files at the end of the training
+if not os.path.isdir("results"):
+    os.makedirs("results")
+
 # Do the training here
 for epoch in range(args.epoch_start_i, args.num_epochs):
 
@@ -187,15 +195,25 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             index = i*args.batch_size + j
             id = id_list[index]
             input_image = utils.load_image(train_input_names[id])
+
             output_image = utils.load_image(train_output_names[id])
 
             with tf.device('/cpu:0'):
                 input_image, output_image = data_augmentation(input_image, output_image)
 
-
+                if len(input_image.shape) < 3:
+                    input_image = input_image.reshape((input_image.shape[0], input_image.shape[1], 1))
+                
                 # Prep the data. Make sure the labels are in one-hot format
-                input_image = np.float32(input_image) / 255.0
-                output_image = np.float32(helpers.one_hot_it(label=output_image, label_values=label_values))
+                # Our images are uint16
+                # input_image = np.float32(input_image) / 255.0
+                input_image = np.float32(input_image) / (2**(16)-1)
+
+                # Make output binary as our masks are instance masks
+                if np.max(output_image) > np.max(label_values):
+                    output_image[output_image > 0] = 1
+
+                output_image = np.float32(helpers.one_hot_it(label=output_image, label_values=label_values))   
 
                 input_image_batch.append(np.expand_dims(input_image, axis=0))
                 output_image_batch.append(np.expand_dims(output_image, axis=0))
@@ -204,8 +222,8 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             input_image_batch = input_image_batch[0]
             output_image_batch = output_image_batch[0]
         else:
-            input_image_batch = np.squeeze(np.stack(input_image_batch, axis=1))
-            output_image_batch = np.squeeze(np.stack(output_image_batch, axis=1))
+            input_image_batch = np.squeeze(np.stack(input_image_batch, axis=1), axis=0)
+            output_image_batch = np.squeeze(np.stack(output_image_batch, axis=1), axis=0)
 
         # Do the training
         _,current=sess.run([opt,loss],feed_dict={net_input:input_image_batch,net_output:output_image_batch})
@@ -249,7 +267,8 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         # Do the validation on a small set of validation images
         for ind in val_indices:
 
-            input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
+            # input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
+            input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]), axis=0)
             gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
 
@@ -325,7 +344,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax1.set_ylabel("Avg. val. accuracy")
 
 
-    plt.savefig('accuracy_vs_epochs.png')
+    plt.savefig('results/accuracy_vs_epochs.png')
 
     plt.clf()
 
@@ -336,7 +355,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax2.set_xlabel("Epoch")
     ax2.set_ylabel("Current loss")
 
-    plt.savefig('loss_vs_epochs.png')
+    plt.savefig('results/loss_vs_epochs.png')
 
     plt.clf()
 
@@ -347,10 +366,11 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax3.set_xlabel("Epoch")
     ax3.set_ylabel("Current IoU")
 
-    plt.savefig('iou_vs_epochs.png')
+    plt.savefig('results/iou_vs_epochs.png')
 
-#To save the data in an excel file    
-    sheet_name= args.model + '_' + folder_dataset + '.xlsx'
+#To save the data in an excel file
+    # sheet_name= os.path.join("results",args.model + '_' + folder_dataset + '.xlsx')	
+    sheet_name= os.path.join("results",args.model + '.xlsx')	
     df.at[epoch, 'Average']= avg_score
     for index, item in enumerate(class_avg_scores):
         df.at[epoch, class_names_list[index]]=item
@@ -358,6 +378,6 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     df.at[epoch, 'Validation recall']=avg_recall
     df.at[epoch, 'F1 score']=avg_f1
     df.at[epoch, 'IoU score']=avg_iou
-    df.at[epoch, 'LR'] = learn_rate
-    export_excel = df.to_excel (r'/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/Seg_github/Semantic-Segmentation-Suite/'+sheet_name) #Don't forget to add '.xlsx' at the end of the path
+    df.at[epoch, 'LR'] = str(args.learning_rate)
+    export_excel = df.to_excel (sheet_name) #Don't forget to add '.xlsx' at the end of the path
 

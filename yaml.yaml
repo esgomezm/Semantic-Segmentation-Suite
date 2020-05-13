@@ -1,0 +1,42 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+ name: esgomezm-training-semseg001
+ labels:
+   job-name: esgomezm-training-semseg001
+spec:
+ template:
+   metadata:
+     creationTimestamp: null
+   spec:
+     volumes:
+       - name: data
+         hostPath:
+           path: /srv/bcss/egomez/Semantic-Segmentation-Suite
+           type: Directory
+     containers:
+       - name: nombre-contenedor
+         image: '163.117.178.17:5000/deepcell-tf15'
+         command:
+           - bash
+         args:
+           - train.sh
+         workingDir: /data
+         resources:
+           requests:
+            cpu: "4"
+            memory: "14000"
+           limits:
+             nvidia.com/gpu: '1'
+         volumeMounts:
+           - name: data
+             mountPath: /data
+         terminationMessagePath: /dev/termination-log
+         terminationMessagePolicy: File
+         imagePullPolicy: Always
+     restartPolicy: OnFailure
+     terminationGracePeriodSeconds: 30
+     dnsPolicy: ClusterFirst
+     securityContext: {}
+     schedulerName: default-scheduler
+     priorityClassName: low
