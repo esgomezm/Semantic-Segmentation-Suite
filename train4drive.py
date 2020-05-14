@@ -57,6 +57,7 @@ args = parser.parse_args()
 
 def data_augmentation(input_image, output_image):
     # Data augmentation
+    # crop a patch sampling cell bodies with a sampling pdf (cell==1 has weight 10000 and cell == 0 has weight 1)
     input_image, output_image = utils.random_crop(input_image, output_image, args.crop_height, args.crop_width)
 
     if args.h_flip and random.randint(0,1):
@@ -136,6 +137,7 @@ sheet_name= os.path.join("results",args.model + '.xlsx')
 if not args.continue_training or os.path.exists(sheet_name)==0:
     df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
 else:
+    import pandas as pd
     df=pd.read_excel(sheet_name)
 
 print("\n***** Begin training *****")
@@ -268,12 +270,19 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         for ind in val_indices:
 
             # input_image = np.expand_dims(np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
-            input_image = np.float32(utils.load_image(val_input_names[ind])[:args.crop_height, :args.crop_width]) / (2**(16)-1)
+
+            input_image = np.float32(utils.load_image(val_input_names[ind])) / (2**(16)-1)
+            gt = utils.load_image(val_output_names[ind])
+            if np.max(gt) > np.max(label_values):
+                gt[gt>0] = 1
+            # crop a patch sampling cell bodies with a sampling pdf (cell==1 has weight 10000 and cell == 0 has weight 1)
+            input_image, gt = utils.random_crop(input_image, gt, args.crop_height, args.crop_width)
+            # create an input of shape (1,:,:,:) for the network.
             if len(input_image.shape)==2:            
                 input_image = input_image.reshape((input_image.shape[0], input_image.shape[1], 1))
             input_image = np.expand_dims(input_image, axis=0)
 
-            gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
+            # gt = utils.load_image(val_output_names[ind])[:args.crop_height, :args.crop_width]
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
 
             # st = time.time()
@@ -304,8 +313,12 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
 
             file_name = os.path.basename(val_input_names[ind])
             file_name = os.path.splitext(file_name)[0]
-            cv2.imwrite("%s/%04d/%s_pred.png"%("checkpoints",epoch, file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
-            cv2.imwrite("%s/%04d/%s_gt.png"%("checkpoints",epoch, file_name),cv2.cvtColor(np.uint8(gt), cv2.COLOR_RGB2BGR))
+            if out_vis_image.shape[-1] == 3:
+                cv2.imwrite("%s/%04d/%s_pred.png"%("checkpoints",epoch, file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
+                cv2.imwrite("%s/%04d/%s_gt.png"%("checkpoints",epoch, file_name),cv2.cvtColor(np.uint8(gt), cv2.COLOR_RGB2BGR))
+            else:
+                cv2.imwrite("%s/%04d/%s_pred.tif" % ("checkpoints", epoch, file_name),np.uint8(out_vis_image[:,:,0]))
+                cv2.imwrite("%s/%04d/%s_gt.tif" % ("checkpoints", epoch, file_name),np.uint8(gt))
 
 
         target.close()
