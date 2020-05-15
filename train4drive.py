@@ -386,7 +386,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax1.set_ylabel("Avg. val. accuracy")
 
 
-    plt.savefig('results/accuracy_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/accuracy_vs_epochs.png')
 
     plt.clf()
 
@@ -397,7 +397,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax2.set_xlabel("Epoch")
     ax2.set_ylabel("Current loss")
 
-    plt.savefig('results/loss_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/loss_vs_epochs.png')
 
     plt.clf()
 
@@ -408,7 +408,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     ax3.set_xlabel("Epoch")
     ax3.set_ylabel("Current IoU")
 
-    plt.savefig('results/iou_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/iou_vs_epochs.png')
 
 #To save the data in an excel file
     # # sheet_name= os.path.join("results",args.model + '_' + folder_dataset + '.xlsx')
