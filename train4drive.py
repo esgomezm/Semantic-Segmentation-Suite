@@ -161,7 +161,7 @@ if not os.path.isdir(results_path):
 sheet_name= os.path.join("results",args.checkpoint,args.model + '.csv')
 if not args.continue_training or os.path.exists(sheet_name)==0:
     # df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
-    fields = 'Epoch; Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score; LR'
+    fields = 'Epoch; Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score; Average loss; LR'
     with open(sheet_name, 'w') as file_:
         file_.write(fields)
         file_.write("\n")
@@ -199,6 +199,8 @@ random.seed(16)
 val_indices=random.sample(range(0,len(val_input_names)),num_vals)
 
 # Do the training here
+# Create a mark to store the pots without removing previous ones:
+plt_mark = time.ctime()
 for epoch in range(args.epoch_start_i, args.num_epochs):
 
     current_losses = []
@@ -380,35 +382,36 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
 
     fig1, ax1 = plt.subplots(figsize=(11, 8))
 
-    ax1.plot(range(epoch+1), avg_scores_per_epoch)
+    ax1.plot(range(args.epoch_start_i, epoch+1), avg_scores_per_epoch)
     ax1.set_title("Average validation accuracy vs epochs")
     ax1.set_xlabel("Epoch")
     ax1.set_ylabel("Avg. val. accuracy")
 
 
-    plt.savefig('results/' + args.checkpoint + '/accuracy_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/accuracy_vs_epochs-' + plt_mark + '.png')
 
     plt.clf()
 
     fig2, ax2 = plt.subplots(figsize=(11, 8))
 
-    ax2.plot(range(epoch+1), avg_loss_per_epoch)
+    ax2.plot(range(args.epoch_start_i, epoch+1), avg_loss_per_epoch)
     ax2.set_title("Average loss vs epochs")
     ax2.set_xlabel("Epoch")
     ax2.set_ylabel("Current loss")
 
-    plt.savefig('results/' + args.checkpoint + '/loss_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/loss_vs_epochs-' + plt_mark + '.png')
 
     plt.clf()
 
     fig3, ax3 = plt.subplots(figsize=(11, 8))
 
-    ax3.plot(range(epoch+1), avg_iou_per_epoch)
+    ax3.plot(range(args.epoch_start_i, epoch+1), avg_iou_per_epoch)
+    # plt.xticks(np.arange(args.epoch_start_i, epoch+1, step=10))
     ax3.set_title("Average IoU vs epochs")
     ax3.set_xlabel("Epoch")
     ax3.set_ylabel("Current IoU")
 
-    plt.savefig('results/' + args.checkpoint + '/iou_vs_epochs.png')
+    plt.savefig('results/' + args.checkpoint + '/iou_vs_epochs-' + plt_mark + '.png')
 
 #To save the data in an excel file
     # # sheet_name= os.path.join("results",args.model + '_' + folder_dataset + '.xlsx')
@@ -423,6 +426,6 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     # df.at[epoch, 'LR'] = str(args.learning_rate)
     # export_excel = df.to_excel (sheet_name) #Don't forget to add '.xlsx' at the end of the path
     with open(sheet_name, mode='a') as file_:
-        file_.write("{};{};{};{};{};{};{};{};{}".format(epoch,avg_score, class_avg_scores[0], class_avg_scores[1],
-                                         avg_precision, avg_recall, avg_f1, avg_iou, args.learning_rate))
+        file_.write("{};{};{};{};{};{};{};{};{};{}".format(epoch,avg_score, class_avg_scores[0], class_avg_scores[1],
+                                         avg_precision, avg_recall, avg_f1, avg_iou, mean_loss, args.learning_rate))
         file_.write("\n")
