@@ -27,8 +27,12 @@ def get_label_info(csv_path):
         file_reader = csv.reader(csvfile, delimiter=',')
         header = next(file_reader)
         for row in file_reader:
-            class_names.append(row[0])
-            label_values.append([int(row[1]), int(row[2]), int(row[3])])
+            if len(row)==4:
+                class_names.append(row[0])
+                label_values.append([int(row[1]), int(row[2]), int(row[3])])
+            else:
+                class_names.append(row[0])
+                label_values.append([int(row[1])])
         # print(class_dict)
     return class_names, label_values
 
@@ -64,7 +68,10 @@ def one_hot_it(label, label_values):
     for colour in label_values:
         # colour_map = np.full((label.shape[0], label.shape[1], label.shape[2]), colour, dtype=int)
         equality = np.equal(label, colour)
-        class_map = np.all(equality, axis = -1)
+        if len(label.shape) == 3:
+            class_map = np.all(equality, axis = -1)
+        else:
+            class_map = equality.astype(np.int8)
         semantic_map.append(class_map)
     semantic_map = np.stack(semantic_map, axis=-1)
     # print("Time 2 = ", time.time() - st)

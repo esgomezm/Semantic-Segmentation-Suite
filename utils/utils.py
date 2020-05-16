@@ -7,7 +7,7 @@ import time, datetime
 import os, random
 from scipy.misc import imread
 import ast
-import SimpleITK as sitk
+# import SimpleITK as sitk
 from sklearn.metrics import precision_score, \
     recall_score, confusion_matrix, classification_report, \
     accuracy_score, f1_score
@@ -46,9 +46,11 @@ def load_image(path):
     if '//' in path:
       k=[m.start() for m in re.finditer('//',path)]
       path=path[k[0]+1:]
-    itkimage = sitk.ReadImage(path)
-    numpyImage = sitk.GetArrayFromImage(itkimage)
-    return numpyImage
+
+    image = cv2.imread(path, cv2.IMREAD_ANYDEPTH)
+    # itkimage = sitk.ReadImage(path)
+    # numpyImage = sitk.GetArrayFromImage(itkimage)
+    return image
 
 # Takes an absolute file path and returns the name of the file without th extension
 def filepath_to_name(full_name):
@@ -185,10 +187,12 @@ def random_crop(image, label, crop_height, crop_width):
         x = coordinates[1][0] # pdf first coordinate corresponds to the "x" axis = width
         y = coordinates[0][0] # pdf second coordinate corresponds to the "y" axis = height
 
-        if len(label.shape) == 3:
+        if len(label.shape) == 3 and len(image.shape) == 3:
             return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width, :]
-        else:
+        elif len(image.shape) == 3:
             return image[y:y+crop_height, x:x+crop_width, :], label[y:y+crop_height, x:x+crop_width]
+        else:
+            return image[y:y + crop_height, x:x + crop_width], label[y:y + crop_height, x:x + crop_width]
     else:
         raise Exception('Crop shape (%d, %d) exceeds image dimensions (%d, %d)!' % (crop_height, crop_width, image.shape[0], image.shape[1]))
 
