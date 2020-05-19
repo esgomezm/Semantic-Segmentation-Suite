@@ -7,12 +7,24 @@ from utils import utils, helpers
 from builders import model_builder
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--checkpoint_path', type=str, default='checkpoints/latest_model_MobileUNet_RGB_folder.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
+parser.add_argument('--checkpoint_path', type=str, default='checkpoints/Mon May 18 15:53:51 2020/latest_model_MobileUNet_.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
 parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
 parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
 parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
-parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/RGB_folder/", required=False, help='The dataset you are using')
+parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/data4training/SEG/", required=False, help='The dataset you are using')
 args = parser.parse_args()
+
+# Create directories if needed
+if not os.path.isdir("%s"%("Test")):
+        os.makedirs("%s"%("Test"))
+
+sheet_name= os.path.join("Test",args.model + '.csv')
+if os.path.exists(sheet_name)==0:
+    # df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
+    fields = 'Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score'
+    with open(sheet_name, 'w') as file_:
+        file_.write(fields)
+        file_.write("\n")
 
 # Get the names of the classes so we can record the evaluation results
 print("Retrieving dataset information ...")
@@ -31,8 +43,8 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess=tf.Session(config=config)
 
-net_input = tf.placeholder(tf.float32,shape=[None,None,None,3])
-net_output = tf.placeholder(tf.float32,shape=[None,None,None,num_classes]) 
+net_input = tf.placeholder(tf.float32,shape=[None,None,None,1]) # We work with intensities not RGB images.
+net_output = tf.placeholder(tf.float32,shape=[None,None,None,num_classes])
 
 network, _ = model_builder.build_model(args.model, net_input=net_input, num_classes=num_classes, crop_width=args.crop_width, crop_height=args.crop_height, is_training=False)
 
@@ -46,12 +58,10 @@ saver.restore(sess, model_checkpoint_name)
 print("Loading the data ...")
 train_input_names,train_output_names, val_input_names, val_output_names, test_input_names, test_output_names = utils.prepare_data(dataset_dir=args.dataset)
 
-# Create directories if needed
-if not os.path.isdir("%s"%("Test")):
-        os.makedirs("%s"%("Test"))
+
 
 target=open("%s/test_scores.csv"%("Test"),'w')
-target.write("test_name, test_accuracy, precision, recall, f1 score, mean iou, %s\n" % (class_names_string))
+target.write("test_name, test_accuracy, precision, recall, f1 score, mean iou %s\n" % (class_names_string))
 scores_list = []
 class_scores_list = []
 precision_list = []
@@ -65,10 +75,13 @@ for ind in range(len(test_input_names)):
     sys.stdout.write("\rRunning test image %d / %d"%(ind+1, len(test_input_names)))
     sys.stdout.flush()
 
-    input_image = np.expand_dims(np.float32(utils.load_image(test_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/255.0
+    input_image = np.expand_dims(np.float32(utils.load_image(test_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/ (2**(16)-1)
+    # if len(input_image.shape) < 3:
+    input_image = input_image.reshape((1,input_image.shape[1], input_image.shape[2], 1))
     gt = utils.load_image(test_output_names[ind])[:args.crop_height, :args.crop_width]
     gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
-
+   
+    
     st = time.time()
     output_image = sess.run(network,feed_dict={net_input:input_image})
 
@@ -94,9 +107,10 @@ for ind in range(len(test_input_names)):
     iou_list.append(iou)
     
     gt = helpers.colour_code_segmentation(gt, label_values)
+cv2.imwrite("%s/%04d/%s_pred.tif" % (checkpoints_path, epoch, file_name),np.uint8(out_vis_image[:,:,0]))
 
-    cv2.imwrite("%s/%s_pred.png"%("Test", file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
-    cv2.imwrite("%s/%s_gt.png"%("Test", file_name),cv2.cvtColor(np.uint8(gt), cv2.COLOR_RGB2BGR))
+    cv2.imwrite("%s/%s_pred.tif"%("Test", file_name),np.uint8(out_vis_image[:,:,0]))
+    cv2.imwrite("%s/%s_gt.tif"%("Test", file_name), np.uint8(gt))
 
 
 target.close()
@@ -118,3 +132,7 @@ print("Average F1 score = ", avg_f1)
 print("Average mean IoU score = ", avg_iou)
 print("Average run time = ", avg_time)
 
+with open(sheet_name, mode='a') as file_:
+        file_.write("{};{};{};{};{};{};{}".format(avg_score, class_avg_scores[0], class_avg_scores[1],
+                                         avg_precision, avg_recall, avg_f1, avg_iou))
+        file_.write("\n")
