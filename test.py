@@ -107,7 +107,6 @@ for ind in range(len(test_input_names)):
     iou_list.append(iou)
     
     gt = helpers.colour_code_segmentation(gt, label_values)
-cv2.imwrite("%s/%04d/%s_pred.tif" % (checkpoints_path, epoch, file_name),np.uint8(out_vis_image[:,:,0]))
 
     cv2.imwrite("%s/%s_pred.tif"%("Test", file_name),np.uint8(out_vis_image[:,:,0]))
     cv2.imwrite("%s/%s_gt.tif"%("Test", file_name), np.uint8(gt))
