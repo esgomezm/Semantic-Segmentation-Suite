@@ -39,7 +39,7 @@ parser.add_argument('--validation_step', type=int, default=1, help='How often to
 parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=True, help='Whether to continue training from a checkpoint. It will read the last epoch and keep working from that with epoch_start_i=last_epoch.')
 parser.add_argument('--checkpoint', type=str, default=time.ctime(), help='Name of the checkpoint to look for pretrained weights')
-#parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
+# parser.add_argument('--dataset', type=str, default="D:\MarinaCalzada\3dprotucell\RGB_data", help='Dataset you are using.')
 # parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/RGB_folder/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
 parser.add_argument('--dataset', type=str, default="/data/data/SemmanticSeg/", help='Dataset you are using.') #NEED TO PUT A FULL DIRECTORY, IT WON'T WORK ONLY PUTTING THE FOLDER
 parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
@@ -47,7 +47,9 @@ parser.add_argument('--crop_width', type=int, default=512, help='Width of croppe
 parser.add_argument('--batch_size', type=int, default=1, help='Number of images in each batch')
 parser.add_argument('--learning_rate', type=float, default=0.01, help='Initial learning rate')
 parser.add_argument('--reduce_lr', type=str2bool, default=True, help='Whether to reduce the learning rate during training')
-parser.add_argument('--num_val_images', type=int, default=100, help='The number of images to used for validations')
+parser.add_argument('--num_val_images', type=int, default=350, help='The number of images to used for validations')
+parser.add_argument('--stor_val', type=str2bool, default=True, help='Wether to store shots of the validation images used during the training')
+parser.add_argument('--random_val',type=str2bool, default=False, help='Wether to analyze a random set of validation images')
 parser.add_argument('--h_flip', type=str2bool, default=True, help='Whether to randomly flip the image horizontally for data augmentation')
 parser.add_argument('--v_flip', type=str2bool, default=True, help='Whether to randomly flip the image vertically for data augmentation')
 parser.add_argument('--brightness', type=float, default=None, help='Whether to randomly change the image brightness for data augmentation. Specifies the max bightness change as a factor between 0.0 and 1.0. For example, 0.1 represents a max brightness change of 10%% (+-).')
@@ -193,10 +195,16 @@ avg_iou_per_epoch = []
 val_indices = []
 num_vals = min(args.num_val_images, len(val_input_names))
 
-# Set random seed to make sure models are validated on the same validation images.
-# So you can compare the results of different models more intuitively.
-random.seed(16)
-val_indices=random.sample(range(0,len(val_input_names)),num_vals)
+if args.random_val == 1:
+    # Set random seed to make sure models are validated on the same validation images.
+    # So you can compare the results of different models more intuitively.
+    # Note: this only works if the entire images are validated rather than random 
+    # patches of them
+    random.seed(16)
+    val_indices=random.sample(range(0,len(val_input_names)),num_vals)
+else:
+    val_indices = np.arange(num_vals)
+# print('{} images for validation'.format(len(val_indices)))    
 
 # Do the training here
 # Create a mark to store the pots without removing previous ones:
@@ -274,7 +282,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     print("Saving latest checkpoint")
     saver.save(sess,model_checkpoint_name)
 
-    if val_indices != 0 and epoch % args.checkpoint_step == 0:
+    if len(val_indices) != 0 and epoch % args.checkpoint_step == 0:
         print("Saving checkpoint for this epoch")
         saver.save(sess,"%s/%04d/model.ckpt"%(checkpoints_path,epoch))
 
@@ -303,7 +311,17 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             if np.max(gt) > np.max(label_values):
                 gt[gt>0] = 1
             # crop a patch sampling cell bodies with a sampling pdf (cell==1 has weight 10000 and cell == 0 has weight 1)
-            input_image, gt = utils.random_crop(input_image, gt, args.crop_height, args.crop_width)
+            ## If random pathces are desired, uncomment next line
+            # input_image, gt = utils.random_crop(input_image, gt, args.crop_height, args.crop_width)
+            # The size of input images has to be module of 32 to have unvariable size in the output.
+            offset = input_image.shape[0]%32
+            input_image = input_image[offset:]
+            gt = gt[offset:]
+            
+            offset = input_image.shape[1]%32
+            input_image = input_image[:,offset:]
+            gt = gt[:,offset:]
+            
             # create an input of shape (1,:,:,:) for the network.
             if len(input_image.shape)==2:            
                 input_image = input_image.reshape((input_image.shape[0], input_image.shape[1], 1))
@@ -313,16 +331,16 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
 
             # st = time.time()
-
+            # Process the patch
             output_image = sess.run(network,feed_dict={net_input:input_image})
-
 
             output_image = np.array(output_image[0,:,:,:])
             output_image = helpers.reverse_one_hot(output_image)
-            out_vis_image = helpers.colour_code_segmentation(output_image, label_values)
-
+            
+            # Calculate the accuracy measures of the obtained result.
             accuracy, class_accuracies, prec, rec, f1, iou = utils.evaluate_segmentation(pred=output_image, label=gt, num_classes=num_classes)
-
+            
+            # Store all accuracy values for this shot.
             file_name = utils.filepath_to_name(val_input_names[ind])
             target.write("%s, %f, %f, %f, %f, %f"%(file_name, accuracy, prec, rec, f1, iou))
             for item in class_accuracies:
@@ -335,18 +353,23 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
             recall_list.append(rec)
             f1_list.append(f1)
             iou_list.append(iou)
+            
+            # Store shots during the evaluation of the validation            
+            if args.stor_val:
+                
+                out_vis_image = helpers.colour_code_segmentation(output_image, label_values)
 
-            gt = helpers.colour_code_segmentation(gt, label_values)
-
-            file_name = os.path.basename(val_input_names[ind])
-            file_name = os.path.splitext(file_name)[0]
-            if out_vis_image.shape[-1] == 3:
-                cv2.imwrite("%s/%04d/%s_pred.png"%(checkpoints_path,epoch, file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
-                cv2.imwrite("%s/%04d/%s_gt.png"%(checkpoints_path,epoch, file_name),cv2.cvtColor(np.uint8(gt), cv2.COLOR_RGB2BGR))
-            else:
-                cv2.imwrite("%s/%04d/%s_pred.tif" % (checkpoints_path, epoch, file_name),np.uint8(out_vis_image[:,:,0]))
-                cv2.imwrite("%s/%04d/%s_gt.tif" % (checkpoints_path, epoch, file_name),np.uint8(gt))
-
+                gt = helpers.colour_code_segmentation(gt, label_values)
+    
+                file_name = os.path.basename(val_input_names[ind])
+                file_name = os.path.splitext(file_name)[0]
+                if out_vis_image.shape[-1] == 3:
+                    cv2.imwrite("%s/%04d/%s_pred.png"%(checkpoints_path,epoch, file_name),cv2.cvtColor(np.uint8(out_vis_image), cv2.COLOR_RGB2BGR))
+                    cv2.imwrite("%s/%04d/%s_gt.png"%(checkpoints_path,epoch, file_name),cv2.cvtColor(np.uint8(gt), cv2.COLOR_RGB2BGR))
+                else:
+                    cv2.imwrite("%s/%04d/%s_pred.tif" % (checkpoints_path, epoch, file_name),np.uint8(out_vis_image[:,:,0]))
+                    cv2.imwrite("%s/%04d/%s_gt.tif" % (checkpoints_path, epoch, file_name),np.uint8(gt))
+                cv2.imwrite("%s/%04d/%s_input.tif" % (checkpoints_path, epoch, file_name),input_image[0,:,:,0])
 
         target.close()
 
