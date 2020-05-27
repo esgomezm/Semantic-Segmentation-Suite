@@ -8,8 +8,8 @@ from builders import model_builder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint_path', type=str, default='checkpoints/Mon May 18 15:53:51 2020/latest_model_MobileUNet_.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
-parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
-parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
+#parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
+#parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
 parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
 parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/data4training/SEG/", required=False, help='The dataset you are using')
 args = parser.parse_args()
@@ -46,7 +46,7 @@ sess=tf.Session(config=config)
 net_input = tf.placeholder(tf.float32,shape=[None,None,None,1]) # We work with intensities not RGB images.
 net_output = tf.placeholder(tf.float32,shape=[None,None,None,num_classes])
 
-network, _ = model_builder.build_model(args.model, net_input=net_input, num_classes=num_classes, crop_width=args.crop_width, crop_height=args.crop_height, is_training=False)
+network, _ = model_builder.build_model(args.model, net_input=net_input, num_classes=num_classes, crop_width=None, crop_height=None, is_training=False)
 
 sess.run(tf.global_variables_initializer())
 model_checkpoint_name=args.checkpoint_path
@@ -74,11 +74,28 @@ run_times_list = []
 for ind in range(len(test_input_names)):
     sys.stdout.write("\rRunning test image %d / %d"%(ind+1, len(test_input_names)))
     sys.stdout.flush()
-
-    input_image = np.expand_dims(np.float32(utils.load_image(test_input_names[ind])[:args.crop_height, :args.crop_width]),axis=0)/ (2**(16)-1)
-    # if len(input_image.shape) < 3:
+    
+    
+#    Due to the halo effect, the receptive field needs to be all the image
+#    The amount of data that is decripted from the borders is 186 pixels per side, kernel dependant
+#    Computation for the input image
+    pad=186
+    input_image = np.float32(utils.load_image(test_input_names[ind]))/ (2**(16)-1)
+    extra_add0 = (input_image.shape[0]+(pad*2))%32
+    toadd0= math.ceil((32-extra_add0)/2)
+    pad00 = pad + toadd0 -1
+    pad01 = pad + toadd0
+    extra_add1 = (input_image.shape[1]+(pad*2))%32
+    toadd1= math.ceil((32-extra_add1)/2)
+    pad10 = pad + toadd1 -1
+    pad11 = pad + toadd1
+#    The computation for the padding is the same for both
+    input_image = cv2.copyMakeBorder(input_image,pad00,pad01,pad10,pad11,cv2.BORDER_REFLECT)
+    input_image = np.expand_dims(input_image,axis=0)
     input_image = input_image.reshape((1,input_image.shape[1], input_image.shape[2], 1))
-    gt = utils.load_image(test_output_names[ind])[:args.crop_height, :args.crop_width]
+    
+    gt = utils.load_image(test_output_names[ind])
+    gt = cv2.copyMakeBorder(gt,pad00,pad01,pad10,pad11,cv2.BORDER_REFLECT)
     gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
    
     
