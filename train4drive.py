@@ -34,8 +34,8 @@ df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Valida
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs', type=int, default=100, help='Number of epochs to train for')
 parser.add_argument('--epoch_start_i', type=int, default=0, help='Start counting epochs from this number')
-parser.add_argument('--checkpoint_step', type=int, default=5, help='How often to save checkpoints (epochs)')
-parser.add_argument('--validation_step', type=int, default=1, help='How often to perform validation (epochs)')
+parser.add_argument('--checkpoint_step', type=int, default=20, help='How often to save checkpoints (epochs)')
+parser.add_argument('--validation_step', type=int, default=100, help='How often to perform validation (epochs)')
 parser.add_argument('--image', type=str, default=None, help='The image you want to predict on. Only valid in "predict" mode.')
 parser.add_argument('--continue_training', type=str2bool, default=True, help='Whether to continue training from a checkpoint. It will read the last epoch and keep working from that with epoch_start_i=last_epoch.')
 parser.add_argument('--checkpoint', type=str, default=time.ctime(), help='Name of the checkpoint to look for pretrained weights')
@@ -144,6 +144,7 @@ if args.continue_training and os.path.isdir(checkpoints_path):
     dirs = dirs[0]
     dirs.sort()
     args.epoch_start_i = int(dirs[-1])
+    print('The training starts from the last epoch {}'.format(args.epoch_start_i))
 
 
 # Load the data
@@ -167,6 +168,15 @@ if not args.continue_training or os.path.exists(sheet_name)==0:
     with open(sheet_name, 'w') as file_:
         file_.write(fields)
         file_.write("\n")
+
+# initialize values to avoid any error.
+avg_score = []
+class_avg_scores= [0,0]
+avg_precision = []
+avg_recall = []
+avg_f1 = []
+avg_iou = []
+
 # else:
 #     import pandas as pd
 #     df=pd.read_excel(sheet_name)
@@ -209,6 +219,12 @@ else:
 # Do the training here
 # Create a mark to store the pots without removing previous ones:
 plt_mark = time.ctime()
+# Define the x-limtis for the plots.
+if args.epoch_start_i % args.validation_step == 0:
+    e0 = args.epoch_start_i
+else:
+    e0 = args.epoch_start_i + args.validation_step - (args.epoch_start_i % args.validation_step)
+    
 for epoch in range(args.epoch_start_i, args.num_epochs):
 
     current_losses = []
@@ -283,11 +299,17 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     saver.save(sess,model_checkpoint_name)
 
     if len(val_indices) != 0 and epoch % args.checkpoint_step == 0:
+        # Create directories if needed
+        if not os.path.isdir("%s/%04d"%(checkpoints_path,epoch)):
+            os.makedirs("%s/%04d"%(checkpoints_path,epoch))
         print("Saving checkpoint for this epoch")
         saver.save(sess,"%s/%04d/model.ckpt"%(checkpoints_path,epoch))
 
 
     if epoch % args.validation_step == 0:
+        # Create directories if needed
+        if not os.path.isdir("%s/%04d"%(checkpoints_path,epoch)):
+            os.makedirs("%s/%04d"%(checkpoints_path,epoch))
         print("Performing validation")
         target=open("%s/%04d/val_scores.csv"%(checkpoints_path,epoch),'w')
         target.write("val_name, avg_accuracy, precision, recall, f1 score, mean iou, %s\n" % (class_names_string))
@@ -390,6 +412,40 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
         print("Validation recall = ", avg_recall)
         print("Validation F1 score = ", avg_f1)
         print("Validation IoU score = ", avg_iou)
+        
+        # create a plot with all the results
+        fig1, ax1 = plt.subplots(figsize=(11, 8))
+    
+        ax1.plot(range(e0, epoch+1,args.validation_step), avg_scores_per_epoch)
+        ax1.set_title("Average validation accuracy vs epochs")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Avg. val. accuracy")
+    
+    
+        plt.savefig('results/' + args.checkpoint + '/accuracy_vs_epochs-' + plt_mark + '.png')
+    
+        plt.clf()
+    
+        fig2, ax2 = plt.subplots(figsize=(11, 8))
+    
+        ax2.plot(range(e0, epoch+1,args.validation_step), avg_loss_per_epoch)
+        ax2.set_title("Average loss vs epochs")
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Current loss")
+    
+        plt.savefig('results/' + args.checkpoint + '/loss_vs_epochs-' + plt_mark + '.png')
+    
+        plt.clf()
+    
+        fig3, ax3 = plt.subplots(figsize=(11, 8))
+    
+        ax3.plot(range(e0, epoch+1,args.validation_step), avg_iou_per_epoch)
+        # plt.xticks(np.arange(args.epoch_start_i, epoch+1, step=10))
+        ax3.set_title("Average IoU vs epochs")
+        ax3.set_xlabel("Epoch")
+        ax3.set_ylabel("Current IoU")
+    
+        plt.savefig('results/' + args.checkpoint + '/iou_vs_epochs-' + plt_mark + '.png')
 
     epoch_time=time.time()-epoch_st
     remain_time=epoch_time*(args.num_epochs-1-epoch)
@@ -403,38 +459,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     scores_list = []
 
 
-    fig1, ax1 = plt.subplots(figsize=(11, 8))
 
-    ax1.plot(range(args.epoch_start_i, epoch+1), avg_scores_per_epoch)
-    ax1.set_title("Average validation accuracy vs epochs")
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("Avg. val. accuracy")
-
-
-    plt.savefig('results/' + args.checkpoint + '/accuracy_vs_epochs-' + plt_mark + '.png')
-
-    plt.clf()
-
-    fig2, ax2 = plt.subplots(figsize=(11, 8))
-
-    ax2.plot(range(args.epoch_start_i, epoch+1), avg_loss_per_epoch)
-    ax2.set_title("Average loss vs epochs")
-    ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Current loss")
-
-    plt.savefig('results/' + args.checkpoint + '/loss_vs_epochs-' + plt_mark + '.png')
-
-    plt.clf()
-
-    fig3, ax3 = plt.subplots(figsize=(11, 8))
-
-    ax3.plot(range(args.epoch_start_i, epoch+1), avg_iou_per_epoch)
-    # plt.xticks(np.arange(args.epoch_start_i, epoch+1, step=10))
-    ax3.set_title("Average IoU vs epochs")
-    ax3.set_xlabel("Epoch")
-    ax3.set_ylabel("Current IoU")
-
-    plt.savefig('results/' + args.checkpoint + '/iou_vs_epochs-' + plt_mark + '.png')
 
 #To save the data in an excel file
     # # sheet_name= os.path.join("results",args.model + '_' + folder_dataset + '.xlsx')
@@ -448,6 +473,7 @@ for epoch in range(args.epoch_start_i, args.num_epochs):
     # df.at[epoch, 'IoU score']=avg_iou
     # df.at[epoch, 'LR'] = str(args.learning_rate)
     # export_excel = df.to_excel (sheet_name) #Don't forget to add '.xlsx' at the end of the path
+    
     with open(sheet_name, mode='a') as file_:
         file_.write("{};{};{};{};{};{};{};{};{};{}".format(epoch,avg_score, class_avg_scores[0], class_avg_scores[1],
                                          avg_precision, avg_recall, avg_f1, avg_iou, mean_loss, args.learning_rate))
