@@ -187,7 +187,6 @@ def random_crop(image, label, crop_height, crop_width):
         choices = np.prod(pdf_im.shape) 
         index = np.random.choice(choices, size=1,p = prob) # get a random centroid but following a pdf distribution.
         coordinates = np.unravel_index(index, shape=pdf_im.shape)
-        print(coordinates)
         x = coordinates[1][0] # pdf first coordinate corresponds to the "x" axis = width
         y = coordinates[0][0] # pdf second coordinate corresponds to the "y" axis = height
 
