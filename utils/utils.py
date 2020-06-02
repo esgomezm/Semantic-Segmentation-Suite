@@ -178,7 +178,10 @@ def random_crop(image, label, crop_height, crop_width):
     if (crop_width <= image.shape[1]) and (crop_height <= image.shape[0]):
         pdf_im = np.ones(label.shape) # y is a mask
         pdf_im[label>0]=10000 # pdf aquí es un peso. Por ejemplo 10000.
-        pdf_im = pdf_im[:-crop_height,:-crop_width] # limit the coordinates in which a centroid can lay
+        l = np.int(np.floor(crop_height//2))
+        u = np.int(np.floor(crop_width//2))
+        # limit the coordinates in which a centroid can lay. Get it like that to keep all cells in the centroid of the image.
+        pdf_im = pdf_im[l:-l, u:-u]
         prob = np.float32(pdf_im)
         prob = prob.ravel()/np.sum(prob) # convert the 2D matrix into a vector and normalize it so you create a distribution of all the possible values between 1 and prod(pdf.shape)(sum=1)
         choices = np.prod(pdf_im.shape) 

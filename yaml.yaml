@@ -1,10 +1,11 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
- name: esgomezm-training-semseg001
+ name: esgomezm-semseg-sampling-reduce-v000
  labels:
-   job-name: esgomezm-training-semseg001
+   job-name: esgomezm-semseg-sampling-reduce-v000
 spec:
+ backoffLimit: 1
  template:
    metadata:
      creationTimestamp: null
@@ -20,7 +21,7 @@ spec:
          command:
            - bash
          args:
-           - train.sh
+           - train_sampling_reduce_v00.sh
          workingDir: /data
          resources:
            requests:
@@ -35,8 +36,7 @@ spec:
          terminationMessagePolicy: File
          imagePullPolicy: Always
      restartPolicy: OnFailure
-     terminationGracePeriodSeconds: 30
-     dnsPolicy: ClusterFirst
-     securityContext: {}
-     schedulerName: default-scheduler
+     terminationGracePeriodSeconds: 3000
+     ttlSecondsAfterFinished: 2000
+     backoffLimit: 1 #13
      priorityClassName: low
