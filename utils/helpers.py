@@ -4,6 +4,8 @@ import itertools
 import operator
 import os, csv
 import tensorflow as tf
+from scipy import ndimage
+from skimage import morphology
 
 import time, datetime
 
@@ -135,3 +137,18 @@ def colour_code_segmentation(image, label_values):
 
 # file_name = "gt_test.png"
 # cv2.imwrite(file_name,np.uint8(gt))
+    
+def foreground_binarize (image, thereshold):
+    upper, lower = 1, 0
+    fore_bin= np.where(image>thereshold, upper, lower)
+    return fore_bin
+
+
+
+def remove_small (image, min_size):
+#    The min_size is the area of pixels at which the data is going to be dismissed
+    blobs_labels,nlabels = ndimage.measurements.label(image)
+#    Compute the properties of the region (uncomment the next one)
+#    properties = regionprops(blobs_labels)   
+    clean_image = morphology.remove_small_objects(blobs_labels,min_size, connectivity=2)
+    return clean_image

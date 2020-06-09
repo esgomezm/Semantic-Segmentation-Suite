@@ -8,8 +8,6 @@ from builders import model_builder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint_path', type=str, default='checkpoints/Mon May 18 15:53:51 2020/latest_model_MobileUNet_.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
-#parser.add_argument('--crop_height', type=int, default=512, help='Height of cropped input image to network')
-#parser.add_argument('--crop_width', type=int, default=512, help='Width of cropped input image to network')
 parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
 parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/data4training/SEG/", required=False, help='The dataset you are using')
 args = parser.parse_args()
@@ -21,7 +19,7 @@ if not os.path.isdir("%s"%("Test")):
 sheet_name= os.path.join("Test",args.model + '.csv')
 if os.path.exists(sheet_name)==0:
     # df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
-    fields = 'Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score'
+    fields = 'Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score; Average_fore; Validation precision_fore; Validation recall_fore; F1 score_fore; IoU score_fore'
     with open(sheet_name, 'w') as file_:
         file_.write(fields)
         file_.write("\n")
@@ -70,6 +68,13 @@ f1_list = []
 iou_list = []
 run_times_list = []
 
+scores_list_fore = []
+class_scores_list_fore = []
+precision_list_fore = []
+recall_list_fore = []
+f1_list_fore = []
+iou_list_fore = []
+
 # Run testing on ALL test images
 for ind in range(len(test_input_names)):
     sys.stdout.write("\rRunning test image %d / %d"%(ind+1, len(test_input_names)))
@@ -95,7 +100,6 @@ for ind in range(len(test_input_names)):
     input_image = input_image.reshape((1,input_image.shape[1], input_image.shape[2], 1))
     
     gt = utils.load_image(test_output_names[ind])
-    gt = cv2.copyMakeBorder(gt,pad00,pad01,pad10,pad11,cv2.BORDER_REFLECT)
     gt = helpers.reverse_one_hot(helpers.one_hot_it(gt, label_values))
    
     
@@ -105,10 +109,23 @@ for ind in range(len(test_input_names)):
     run_times_list.append(time.time()-st)
 
     output_image = np.array(output_image[0,:,:,:])
+#    We need to crop back the image to the original size
+    output_image = output_image[pad00:-pad01,pad10:-pad11,:]
+#    the output of the network is [:,:,2] in which the first one is the foreground and the other one the background
+    out_fore = output_image[:,:,0]
     output_image = helpers.reverse_one_hot(output_image)
+    out_fore_bin = helpers.foreground_binarize(out_fore, thereshold = 0.5)
+    
+    out_fore_clean = helpers.remove_small(out_fore_bin, min_size=314)
+
     out_vis_image = helpers.colour_code_segmentation(output_image, label_values)
+    out_fore_vis_image = helpers.colour_code_segmentation(out_fore_clean, label_values)
+
+
 
     accuracy, class_accuracies, prec, rec, f1, iou = utils.evaluate_segmentation(pred=output_image, label=gt, num_classes=num_classes)
+    accuracy_fore, class_accuracies_fore, prec_fore, rec_fore, f1_fore, iou_fore = utils.evaluate_segmentation(pred=out_fore_clean, label=gt, num_classes=num_classes)
+
 
     file_name = utils.filepath_to_name(test_input_names[ind])
     target.write("%s, %f, %f, %f, %f, %f"%(file_name, accuracy, prec, rec, f1, iou))
@@ -123,10 +140,19 @@ for ind in range(len(test_input_names)):
     f1_list.append(f1)
     iou_list.append(iou)
     
+    scores_list_fore.append(accuracy_fore)
+    class_scores_list_fore.append(class_accuracies_fore)
+    precision_list_fore.append(prec_fore)
+    recall_list_fore.append(rec_fore)
+    f1_list_fore.append(f1_fore)
+    iou_list_fore.append(iou_fore)
+    
     gt = helpers.colour_code_segmentation(gt, label_values)
 
     cv2.imwrite("%s/%s_pred.tif"%("Test", file_name),np.uint8(out_vis_image[:,:,0]))
     cv2.imwrite("%s/%s_gt.tif"%("Test", file_name), np.uint8(gt))
+    cv2.imwrite("%s/%s_fore.tif"%("Test", file_name), np.uint8(out_fore_vis_image[:,:,0]))
+    cv2.imwrite("%s/%s_forebefore.tif"%("Test", file_name), (out_fore))
 
 
 target.close()
@@ -138,6 +164,15 @@ avg_recall = np.mean(recall_list)
 avg_f1 = np.mean(f1_list)
 avg_iou = np.mean(iou_list)
 avg_time = np.mean(run_times_list)
+
+avg_score_fore = np.mean(scores_list_fore)
+class_avg_scores_fore = np.mean(class_scores_list_fore, axis=0)
+avg_precision_fore = np.mean(precision_list_fore)
+avg_recall_fore = np.mean(recall_list_fore)
+avg_f1_fore = np.mean(f1_list_fore)
+avg_iou_fore = np.mean(iou_list_fore)
+
+
 print("Average test accuracy = ", avg_score)
 print("Average per class test accuracies = \n")
 for index, item in enumerate(class_avg_scores):
@@ -149,6 +184,6 @@ print("Average mean IoU score = ", avg_iou)
 print("Average run time = ", avg_time)
 
 with open(sheet_name, mode='a') as file_:
-        file_.write("{};{};{};{};{};{};{}".format(avg_score, class_avg_scores[0], class_avg_scores[1],
-                                         avg_precision, avg_recall, avg_f1, avg_iou))
+        file_.write("{};{};{};{};{};{};{};{};{};{};{};{}".format(avg_score, class_avg_scores[0], class_avg_scores[1], 
+                                                  avg_precision, avg_recall, avg_f1, avg_iou, avg_score_fore, avg_precision_fore, avg_recall_fore, avg_f1_fore, avg_iou_fore))
         file_.write("\n")
