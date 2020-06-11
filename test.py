@@ -114,9 +114,13 @@ for ind in range(len(test_input_names)):
 #    the output of the network is [:,:,2] in which the first one is the foreground and the other one the background
     out_fore = output_image[:,:,0]
     output_image = helpers.reverse_one_hot(output_image)
+    output_image = helpers.remove_edge_seg(output_image)
     out_fore_bin = helpers.foreground_binarize(out_fore, thereshold = 0.5)
     
     out_fore_clean = helpers.remove_small(out_fore_bin, min_size=314)
+    out_fore_clean = helpers.remove_edge_seg(out_fore_clean)
+    gt = helpers.remove_edge_seg(gt)
+
 
     out_vis_image = helpers.colour_code_segmentation(output_image, label_values)
     out_fore_vis_image = helpers.colour_code_segmentation(out_fore_clean, label_values)

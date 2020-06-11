@@ -152,3 +152,25 @@ def remove_small (image, min_size):
 #    properties = regionprops(blobs_labels)   
     clean_image = morphology.remove_small_objects(blobs_labels,min_size, connectivity=2)
     return clean_image
+
+def remove_edge_seg(img):
+  blobs_labels,nlabels = ndimage.measurements.label(img)
+
+  edges=np.zeros(blobs_labels.shape)
+  edges[0,:]=1
+  edges[edges.shape[0]-1:,:]=1
+  edges[:,0]=1
+  edges[:,edges.shape[1]-1]=1
+
+  edge_con = np.zeros(blobs_labels.shape)
+  edge_con =  blobs_labels - ndimage.morphology.binary_erosion(blobs_labels)
+
+  val_nlabels = np.arange(nlabels+1)
+
+  for i in val_nlabels:
+        label = edge_con == val_nlabels[i]
+        overlap = np.multiply(label, edges)
+        if np.sum(overlap)>0:
+           candidates = np.unique(overlap) # at two values: 0 and the label of the cell at the border
+           img[blobs_labels==candidates[1]]=0
+  return img
