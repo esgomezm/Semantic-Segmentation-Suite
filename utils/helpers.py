@@ -156,21 +156,12 @@ def remove_small (image, min_size):
 def remove_edge_seg(img):
   blobs_labels,nlabels = ndimage.measurements.label(img)
 
-  edges=np.zeros(blobs_labels.shape)
-  edges[0,:]=1
-  edges[edges.shape[0]-1:,:]=1
-  edges[:,0]=1
-  edges[:,edges.shape[1]-1]=1
-
-  edge_con = np.zeros(blobs_labels.shape)
-  edge_con =  blobs_labels - ndimage.morphology.binary_erosion(blobs_labels)
-
-  val_nlabels = np.arange(nlabels+1)
-
-  for i in val_nlabels:
-        label = edge_con == val_nlabels[i]
-        overlap = np.multiply(label, edges)
-        if np.sum(overlap)>0:
-           candidates = np.unique(overlap) # at two values: 0 and the label of the cell at the border
-           img[blobs_labels==candidates[1]]=0
+  edges = np.copy(img)
+  edges[1:-1, 1:-1] =0
+  edge_labels = np.unique(np.multiply(edges, blobs_labels))
+  if np.sum(edge_labels) > 0:
+    for i in edge_labels[1:]: 
+      labels2remove = blobs_labels == edge_labels[i]
+      img = np.multiply(1-labels2remove, img)
+      
   return img
