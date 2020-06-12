@@ -151,17 +151,21 @@ def remove_small (image, min_size):
 #    Compute the properties of the region (uncomment the next one)
 #    properties = regionprops(blobs_labels)   
     clean_image = morphology.remove_small_objects(blobs_labels,min_size, connectivity=2)
+    clean_image[clean_image>0.5]=1
     return clean_image
 
 def remove_edge_seg(img):
-  blobs_labels,nlabels = ndimage.measurements.label(img)
-
-  edges = np.copy(img)
+  blobs_labels,_ = ndimage.measurements.label(img)
+  labels2remove =[]
+  edges = np.copy(blobs_labels)
   edges[1:-1, 1:-1] =0
-  edge_labels = np.unique(np.multiply(edges, blobs_labels))
+  edges[edges>0.5]=1
+  edge_labels = np.multiply(edges, blobs_labels)
   if np.sum(edge_labels) > 0:
-    for i in edge_labels[1:]: 
-      labels2remove = blobs_labels == edge_labels[i]
+    val = np.unique(edge_labels)
+    for i in range(len(val[1:])):
+      labels2remove = blobs_labels == val[i+1]
       img = np.multiply(1-labels2remove, img)
       
   return img
+

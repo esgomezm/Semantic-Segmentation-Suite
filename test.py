@@ -117,7 +117,7 @@ for ind in range(len(test_input_names)):
     output_image = helpers.remove_edge_seg(output_image)
     out_fore_bin = helpers.foreground_binarize(out_fore, thereshold = 0.5)
     
-    out_fore_clean = helpers.remove_small(out_fore_bin, min_size=314)
+    out_fore_clean = helpers.remove_small(out_fore_bin, min_size=300)
     out_fore_clean = helpers.remove_edge_seg(out_fore_clean)
     gt = helpers.remove_edge_seg(gt)
 
@@ -156,7 +156,7 @@ for ind in range(len(test_input_names)):
     cv2.imwrite("%s/%s_pred.tif"%("Test", file_name),np.uint8(out_vis_image[:,:,0]))
     cv2.imwrite("%s/%s_gt.tif"%("Test", file_name), np.uint8(gt))
     cv2.imwrite("%s/%s_fore.tif"%("Test", file_name), np.uint8(out_fore_vis_image[:,:,0]))
-    cv2.imwrite("%s/%s_forebefore.tif"%("Test", file_name), (out_fore))
+
 
 
 target.close()
