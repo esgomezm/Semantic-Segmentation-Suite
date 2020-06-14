@@ -155,22 +155,19 @@ def remove_small (image, min_size):
     return clean_image
 
 def remove_edge_seg(img):
-  blobs_labels,_ = ndimage.measurements.label(img)
-  labels2remove =[]
-  edges = np.copy(blobs_labels)
-  edges[1:-1, 1:-1] =0
-  edges[edges>0.5]=1
-  edge_labels = np.unique(np.multiply(edges, blobs_labels))
-  if np.sum(edge_labels) > 0:
-#    val = np.unique(edge_labels)
-#    for i in range(len(val[1:])):
-#      labels2remove = blobs_labels == val[i+1]
-#      img = np.multiply(1-labels2remove, img)
-    for i in edge_labels[1:]: 
-          labels2remove = blobs_labels == int(i) # Esta parte no sé si python funcionará, creo que sí. Si no, haces un loop sobre los valores edge_labels[1:]
-          blobs_labels = np.multiply(1-labels2remove, blobs_labels)
-    blobs_labels[blobs_labels>0.5]=1
-    img=np.copy(blobs_labels)
-    
-  return img
+    img=1-img
+    blobs_labels,_ = ndimage.measurements.label(img)
+    labels2remove =[]
+    edges = np.copy(blobs_labels)
+    edges[1:-1, 1:-1] =0
+    edges[edges>0.5]=1
+    edge_labels = np.unique(np.multiply(edges, blobs_labels))
+    if np.sum(edge_labels) > 0:
+        for i in edge_labels[1:]: 
+            labels2remove = blobs_labels == int(i) # Esta parte no sé si python funcionará, creo que sí. Si no, haces un loop sobre los valores edge_labels[1:]
+            blobs_labels = np.multiply(1-labels2remove, blobs_labels)
+        blobs_labels[blobs_labels>1]=1
+        img=np.copy(blobs_labels)
+    img=1-img
+    return img
 
