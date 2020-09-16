@@ -4,6 +4,8 @@ import itertools
 import operator
 import os, csv
 import tensorflow as tf
+from scipy import ndimage
+from skimage import morphology
 
 import time, datetime
 
@@ -135,3 +137,37 @@ def colour_code_segmentation(image, label_values):
 
 # file_name = "gt_test.png"
 # cv2.imwrite(file_name,np.uint8(gt))
+    
+def foreground_binarize (image, thereshold):
+    upper, lower = 1, 0
+    fore_bin= np.where(image>thereshold, upper, lower)
+    return fore_bin
+
+
+
+def remove_small (image, min_size):
+#    The min_size is the area of pixels at which the data is going to be dismissed
+    blobs_labels,nlabels = ndimage.measurements.label(image)
+#    Compute the properties of the region (uncomment the next one)
+#    properties = regionprops(blobs_labels)   
+    clean_image = morphology.remove_small_objects(blobs_labels,min_size, connectivity=2)
+    clean_image[clean_image>0.5]=1
+    return clean_image
+
+def remove_edge_seg(img):
+    img=1-img
+    blobs_labels,_ = ndimage.measurements.label(img)
+    labels2remove =[]
+    edges = np.copy(blobs_labels)
+    edges[1:-1, 1:-1] =0
+    edges[edges>0.5]=1
+    edge_labels = np.unique(np.multiply(edges, blobs_labels))
+    if np.sum(edge_labels) > 0:
+        for i in edge_labels[1:]: 
+            labels2remove = blobs_labels == int(i) # Esta parte no sé si python funcionará, creo que sí. Si no, haces un loop sobre los valores edge_labels[1:]
+            blobs_labels = np.multiply(1-labels2remove, blobs_labels)
+        blobs_labels[blobs_labels>1]=1
+        img=np.copy(blobs_labels)
+    img=1-img
+    return img
+

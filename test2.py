@@ -8,15 +8,15 @@ from builders import model_builder
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint_path', type=str, default='checkpoints/Mon May 18 15:53:51 2020/latest_model_MobileUNet_.ckpt', required=False, help='The path to the latest checkpoint weights for your model.')
-parser.add_argument('--model', type=str, default="MobileUNet", help='The model you are using. See model_builder.py for supported models')
+parser.add_argument('--model', type=str, default="FC-DenseNet103", help='The model you are using. See model_builder.py for supported models')
 parser.add_argument('--dataset', type=str, default="/content/gdrive/My Drive/TFG/TFG MARINA CALZADA/clean_data/data4training/SEG/", required=False, help='The dataset you are using')
 args = parser.parse_args()
 
 # Create directories if needed
-if not os.path.isdir("%s"%("Test")):
-        os.makedirs("%s"%("Test"))
+if not os.path.isdir("%s"%("Test_Dense")):
+        os.makedirs("%s"%("Test_Dense"))
 
-sheet_name= os.path.join("Test",args.model + '.csv')
+sheet_name= os.path.join("Test_Dense",args.model + '.csv')
 if os.path.exists(sheet_name)==0:
     # df = DataFrame(index=range(1), columns=['Average', 'Cell', 'Background', 'Validation precision','Validation recall','F1 score', 'IoU score', 'LR'])
     fields = 'Average; Cell; Background; Validation precision; Validation recall; F1 score; IoU score; Average_fore; Validation precision_fore; Validation recall_fore; F1 score_fore; IoU score_fore'
@@ -58,7 +58,7 @@ train_input_names,train_output_names, val_input_names, val_output_names, test_in
 
 
 
-target=open("%s/test_scores.csv"%("Test"),'w')
+target=open("%s/test_scores.csv"%("Test_Dense"),'w')
 target.write("test_name, test_accuracy, precision, recall, f1 score, mean iou %s\n" % (class_names_string))
 scores_list = []
 class_scores_list = []
@@ -84,7 +84,7 @@ for ind in range(len(test_input_names)):
 #    Due to the halo effect, the receptive field needs to be all the image
 #    The amount of data that is decripted from the borders is 186 pixels per side, kernel dependant
 #    Computation for the input image
-    pad=186
+    pad=95
     input_image = np.float32(utils.load_image(test_input_names[ind]))/ (2**(16)-1)
     extra_add0 = (input_image.shape[0]+(pad*2))%32
     toadd0= math.ceil((32-extra_add0)/2)
@@ -153,9 +153,9 @@ for ind in range(len(test_input_names)):
     
     gt = helpers.colour_code_segmentation(gt, label_values)
 
-    cv2.imwrite("%s/%s_pred.tif"%("Test", file_name),np.uint8(out_vis_image[:,:,0]))
-    cv2.imwrite("%s/%s_gt.tif"%("Test", file_name), np.uint8(gt))
-    cv2.imwrite("%s/%s_fore.tif"%("Test", file_name), np.uint8(out_fore_vis_image[:,:,0]))
+    cv2.imwrite("%s/%s_pred.tif"%("Test_Dense", file_name),np.uint8(out_vis_image[:,:,0]))
+    cv2.imwrite("%s/%s_gt.tif"%("Test_Dense", file_name), np.uint8(gt))
+    cv2.imwrite("%s/%s_fore.tif"%("Test_Dense", file_name), np.uint8(out_fore_vis_image[:,:,0]))
 
 
 
